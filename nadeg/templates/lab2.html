@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0271ff">
+  <meta name="description" content="Расчёт трудоёмкости технического обслуживания: собственный регламент, редактируемые периоды, отчёт PDF и CSV.">
+  <title>NADEG — Трудоёмкость обслуживания</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+  <script src="{{ url_for('static', path='/errors.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/lab2.js') }}" defer></script>
+</head>
+<body data-lab="2">
+  {% include '_header.html' %}
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">Лабораторная работа №2</p><h1>Трудоёмкость обслуживания</h1><p class="muted">Собственные условия эксплуатации и регламент ТО.</p></div><details class="project-menu"><summary>Проект</summary><div class="menu-content"><button id="save-project" type="button">Скачать проект JSON</button><button id="load-project" type="button">Открыть проект JSON</button><button id="new-project" type="button">Новый проект</button></div></details></div>
+    <nav class="steps" aria-label="Этапы работы"><button type="button" data-step="0" aria-current="step"><span>1</span> Данные</button><button type="button" data-step="1"><span>2</span> Регламент ТО</button><button type="button" data-step="2"><span>3</span> Результат</button></nav>
+    <div id="error" class="message error" role="alert" hidden></div>
+    <noscript><p class="message error">Для ввода регламента и сохранения проекта включите JavaScript.</p></noscript>
+    <section data-panel="0" aria-label="Условия эксплуатации">
+      <label class="system-name">Название системы или агрегата<input id="project-title" maxlength="120" value="Моя система"></label>
+      <div class="settings-grid"><label>Ресурс до первого ремонта t₁, ч<input id="resource" inputmode="decimal" placeholder="Введите ресурс" autocomplete="off"></label><label>Среднее время полёта τ, ч<input id="flight-time" inputmode="decimal" placeholder="Введите время" autocomplete="off"></label><label>Полётов за лётный день n<input id="flights-per-day" inputmode="numeric" placeholder="Введите количество" autocomplete="off"></label></div>
+      <h2>Периодическое обслуживание</h2><p class="muted">Измените периоды регламентов под свою задачу.</p><div id="period-rows" class="period-list"></div><button type="button" class="text-button" id="add-period">+ Добавить период</button>
+      <p class="field-note">Периоды идут по возрастанию. Каждый следующий кратен предыдущему. При совпадении выполняется только старшая форма; обслуживание в момент первого ремонта не учитывается.</p>
+      <details class="advanced"><summary>Формулы и правила расчёта</summary><div class="advanced-content"><p class="field-note">Nлд = t₁ / (nτ); Nпредв = Nлд / 2; Nпредпол = Nпослепол = Nлд; Nповт = Nлд(n − 1).</p><p class="field-note">Количество регламентов определяется строго до первого ремонта. Крупная форма заменяет совпадающие младшие. Дробное число лётных дней сохраняется в вычислениях.</p><p class="field-note">Tⱼ = Nⱼ × Σᵢtᵢⱼ; Tпл = ΣⱼTⱼ; Kт.пл = Tпл / t₁. Нормативы вводятся в чел·ч за одно обслуживание системы.</p></div></details>
+    </section>
+    <section data-panel="1" aria-label="Регламент технического обслуживания" hidden>
+      <div class="section-top"><div><h2>Регламент ТО</h2><p class="muted">Трудоёмкость операции за одно обслуживание, чел·ч.</p></div><div class="export-actions"><button type="button" id="import-csv">Импорт CSV</button><button type="button" id="paste-table">Вставить из Excel</button></div></div>
+      <p class="field-note">Пустая ячейка = 0. Нормативы каждой формы задаются полностью, а не как добавка к предыдущей: старшая форма включает выполняемые в ней работы младших форм.</p>
+      <div class="table-wrap"><table class="maintenance-table" id="regulation-table"><thead id="regulation-header"></thead><tbody id="operation-rows"></tbody></table></div>
+      <button type="button" class="text-button add-button" id="add-operation">+ Добавить операцию</button>
+      <details class="advanced"><summary>Как заполнить и импортировать таблицу</summary><div class="advanced-content"><p class="field-note">Например, работа двух человек по 30 минут — 1 чел·ч. Не вводите только длительность, если работу выполняет несколько человек.</p><p class="field-note">Для Excel скопируйте строки с названием операции и трудоёмкостями в порядке столбцов на экране. Можно вставлять с заголовками или без них. CSV — UTF-8, разделитель ;, запятая или табуляция; десятичная запятая поддерживается.</p><p class="field-note">Заголовки: operation; preliminary; preflight; turnaround; postflight; затем периоды в часах или ID форм (P1, P2…). Импорт заменяет только регламент текущей ЛР №2.</p></div></details>
+    </section>
+    <section data-panel="2" aria-label="Результаты расчёта" hidden>
+      <div id="empty-result" class="empty-state"><h2>Результат появится после расчёта</h2><p class="muted">Заполните условия эксплуатации и регламент ТО.</p></div>
+      <div id="results" hidden>
+        <div class="section-top"><h2>Результат расчёта</h2><div class="export-actions" aria-label="Экспорт"><button id="export-pdf" type="button">PDF</button><button id="export-csv" type="button">CSV</button></div></div>
+        <dl class="metrics"><div><dt>Суммарная трудоёмкость</dt><dd id="metric-total">—</dd><small>чел·ч за ресурс</small></div><div><dt>Удельная трудоёмкость</dt><dd id="metric-specific">—</dd><small>чел·ч на час налёта</small></div><div><dt>Расчётных лётных дней</dt><dd id="metric-days">—</dd><small id="metric-flights"></small></div></dl>
+        <h3>По видам обслуживания</h3><div class="table-wrap"><table class="result-table"><thead><tr><th>Вид обслуживания</th><th>Количество</th><th>На одно, чел·ч</th><th>За ресурс, чел·ч</th><th>Доля, %</th></tr></thead><tbody id="form-results"></tbody></table></div>
+        <h3>По операциям</h3><div class="table-wrap"><table class="result-table"><thead><tr><th>Операция</th><th>За ресурс, чел·ч</th><th>Доля, %</th></tr></thead><tbody id="operation-results"></tbody></table></div>
+        <details class="advanced"><summary>Ход расчёта и замечания</summary><div class="advanced-content"><p id="days-formula"></p><ul id="count-formulas"></ul><p>Tⱼ = Nⱼ × Σᵢtᵢⱼ; Tпл = ΣⱼTⱼ; Kт.пл = Tпл / t₁.</p><ul id="rules"></ul><ul id="warnings"></ul><p class="field-note">Числа на экране округлены для чтения. Промежуточный расчёт выполняется с точными дробями; экспорт CSV сохраняет до 60 значащих цифр результата.</p></div></details>
+      </div>
+    </section>
+    <footer class="workflow-footer"><button class="secondary" id="back" type="button" hidden>← Назад</button><span class="muted" id="step-caption">Введите условия эксплуатации</span><button class="primary" id="next" type="button">К регламенту →</button></footer>
+    <footer class="page-footer"><span>NADEG · ЛР №2 · Учебный расчёт</span><span>Черновик ЛР №2 хранится отдельно от ЛР №1 в этом браузере.</span></footer>
+  </main>
+  <input id="project-file" type="file" accept=".json,application/json" hidden><input id="csv-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" hidden>
+  <dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">Подтвердить действие</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="confirm" type="submit">Продолжить</button></div></form></dialog>
+  <dialog id="paste-dialog"><h2>Вставить таблицу из Excel</h2><label>Название операции и трудоёмкости в порядке столбцов<textarea id="paste-content" rows="9" maxlength="100000" placeholder="Вставьте скопированные строки"></textarea></label><div class="dialog-actions"><button type="button" id="paste-cancel">Отмена</button><button class="primary" type="button" id="paste-import">Импортировать</button></div></dialog>
+</body>
+</html>

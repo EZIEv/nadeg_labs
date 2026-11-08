@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0271ff">
+  <meta name="description" content="Аналитическая часть ЛР №3: собственный анализ конструкции, проверка ИИ и отчёт.">
+  <title>NADEG — Анализ живучести</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+  <script src="{{ url_for('static', path='/errors.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/lab3.js') }}" defer></script>
+</head>
+<body data-lab="3">
+{% include '_header.html' %}
+<main>
+  <div class="page-heading"><div><p class="eyebrow">Лабораторная работа №3 · Аналитическая часть</p><h1>Анализ живучести</h1><p class="muted">Ваш анализ конструкции и обоснование мероприятий. ИИ помогает проверить работу.</p></div><details class="project-menu"><summary>Проект</summary><div class="menu-content"><button id="save-project" type="button">Скачать проект JSON</button><button id="load-project" type="button">Открыть проект JSON</button><button id="new-project" type="button">Новый проект</button></div></details></div>
+  <nav class="steps" aria-label="Этапы работы"><button type="button" data-step="0" aria-current="step"><span>1</span> Объект и материалы</button><button type="button" data-step="1"><span>2</span> Ваш анализ</button><button type="button" data-step="2"><span>3</span> Проверка и отчёт</button></nav>
+  <div id="error" class="message error" role="alert" hidden></div>
+  <noscript><p class="message error">Для работы с анализом включите JavaScript.</p></noscript>
+  <section data-panel="0" aria-label="Объект и материалы">
+    <label class="system-name">Объект исследования<input id="project-title" maxlength="120" placeholder="Название агрегата или системы"></label>
+    <div class="lab3-fields"><label>Назначение<textarea id="purpose" maxlength="4000" rows="3" placeholder="Какие функции выполняет объект"></textarea></label><label>Размещение<textarea id="placement" maxlength="4000" rows="3" placeholder="Где расположен объект и с чем связан"></textarea></label><label class="wide">Устройство и состав<textarea id="construction" maxlength="6000" rows="4" placeholder="Опишите элементы конструкции, их связи и особенности"></textarea></label></div>
+    <div class="section-top"><div><h2>Исходные материалы</h2><p class="muted">Фрагменты описаний и изображения, на которые опирается ваш анализ.</p></div><div class="export-actions"><button id="add-text" type="button">+ Текст</button><button id="add-image" type="button">+ Изображение</button></div></div>
+    <div id="materials"></div><p class="field-note">До 8 материалов, из них до 4 изображений PNG/JPEG. Изображения уменьшаются перед сохранением; до 2 МБ каждое. Материалы отправляются сервису ИИ только при нажатии «Проверить анализ».</p>
+  </section>
+  <section data-panel="1" aria-label="Анализ студента" hidden>
+    <div class="section-top"><div><h2>Ваш анализ</h2><p class="muted">Свяжите условия воздействия с недостатками, последствиями и предлагаемыми изменениями.</p></div></div>
+    <div class="table-wrap"><table class="analysis-table"><thead><tr><th>Условие воздействия</th><th>Конструктивный недостаток</th><th>Последствие</th><th>Мероприятие</th><th>Обоснование</th><th><span class="sr-only">Действия</span></th></tr></thead><tbody id="analysis-rows"></tbody></table></div>
+    <button id="add-row" type="button" class="text-button add-button">+ Добавить строку</button>
+    <p class="field-note">Одна строка — одна связанная цепочка рассуждений. В обосновании можно ссылаться на ID материала: S1, S2… Неизвестные сведения оставьте незаполненными.</p>
+  </section>
+  <section data-panel="2" aria-label="Проверка и отчёт" hidden>
+    <div class="section-top"><div><h2>Проверка анализа</h2><p class="muted" id="ai-status" role="status">Проверка готовности помощника…</p></div><button id="review-button" type="button" class="primary">Проверить анализ</button></div>
+    <p class="field-note">ИИ проверяет полноту и логику вашей работы. Для каждого совета показываются основание, допущения и способ проверки. Второй запрос проверяет согласованность совета; спорные правки доступны для изучения и ручного редактирования анализа. Наличие цитаты не доказывает техническую правильность вывода. Проверка согласованности ИИ также может ошибаться. Числовая оценка живучести не рассчитывается.</p>
+    <div id="review-progress" class="message" role="status" hidden>Проверка выполняется. Обычно это занимает до двух минут. Не закрывайте страницу.</div>
+    <div id="review-empty" class="empty-state"><p class="muted">Заполните собственный анализ, затем отправьте его на проверку. Отчёт можно скачать и без ИИ.</p></div>
+    <div id="review" hidden><p id="review-stale" class="message" hidden>Анализ изменён после проверки. Замечания относятся к предыдущей редакции; при необходимости проверьте работу повторно.</p><p id="review-date" class="field-note"></p><p id="review-summary" class="review-summary"></p><div id="suggestions"></div><div id="missing-block" hidden><h3>Каких данных не хватает</h3><ul id="missing-information"></ul><button id="copy-questions" type="button" class="text-button">Добавить вопросы в ограничения отчёта</button></div></div>
+    <div class="report-fields"><h2>Итог аналитической части</h2><p class="muted">В отчёт входят текущие данные и принятые правки. Непринятые предложения ИИ в него не попадают.</p><label>Вывод<textarea id="conclusion" rows="5" maxlength="6000" placeholder="Обобщите недостатки, предлагаемые мероприятия и ожидаемый качественный эффект"></textarea></label><label>Ограничения и недостающие данные<textarea id="limitations" rows="4" maxlength="6000" placeholder="Какие предположения и сведения ещё требуют проверки"></textarea></label><div class="export-actions"><button id="export-pdf" type="button">Скачать PDF</button><button id="export-csv" type="button">Скачать CSV</button></div></div>
+  </section>
+  <footer class="workflow-footer"><button id="back" type="button" class="secondary" hidden>← Назад</button><span id="step-caption" class="muted">Опишите объект и добавьте материалы</span><button id="next" type="button" class="primary">К анализу →</button></footer>
+  <footer class="page-footer"><span>NADEG · ЛР №3 · Аналитическая часть</span><span>Черновик и изображения сохраняются в этом браузере.</span></footer>
+</main>
+<input id="project-file" type="file" accept=".json,application/json" hidden><input id="image-file" type="file" accept="image/png,image/jpeg" hidden>
+<dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">Подтвердить действие</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Отмена</button><button value="confirm" class="primary">Продолжить</button></div></form></dialog>
+</body>
+</html>

@@ -1,0 +1,11 @@
+*
+!Dockerfile
+!requirements.runtime.lock
+!nadeg/
+!nadeg/**
+**/__pycache__/
+**/*.py[cod]
+
+*.api
+.env.*
+!.env.example

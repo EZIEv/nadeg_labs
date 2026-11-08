@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0271ff">
+  <meta name="description" content="Анализ безотказности собственной системы и подбор резервирования. Учебный комплекс NADEG.">
+  <title>NADEG — Безотказность систем</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+  <script src="{{ url_for('static', path='/errors.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+</head>
+<body>
+  {% include '_header.html' %}
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">Лабораторная работа №1</p><h1>Безотказность системы</h1><p class="muted">Задайте элементы, опишите связи и исследуйте результат.</p></div><details class="project-menu"><summary>Проект</summary><div class="menu-content"><button id="save-project" type="button">Скачать проект JSON</button><button id="load-project" type="button">Открыть проект JSON</button><button id="new-project" type="button">Новый проект</button></div></details></div>
+    <nav class="task-tabs" aria-label="Задача"><button id="mode-analysis" type="button" data-mode="analysis" aria-pressed="true">Анализ системы</button><button id="mode-reserve" type="button" data-mode="reserve" aria-pressed="false">Подбор резервирования</button></nav>
+    <p id="task-scope" class="field-note">Задание 1: условия И/ИЛИ и общие физические элементы.</p>
+    <nav class="steps" aria-label="Этапы работы"><button type="button" data-step="0" aria-current="step"><span>1</span> Данные</button><button type="button" data-step="1"><span>2</span> Структура</button><button type="button" data-step="2"><span>3</span> Результат</button></nav>
+    <div id="error" class="message error" role="alert" hidden></div>
+    <noscript><p class="message error">Для ввода структуры и локального сохранения включите JavaScript.</p></noscript>
+    <section id="panel-data" data-panel="0" aria-label="Исходные данные">
+      <div class="settings-grid">
+        <label class="title-field">Название системы<input id="project-title" maxlength="120" placeholder="Моя система" value="Моя система"></label>
+        <label>Время работы τ, ч<input id="time" inputmode="decimal" value="4" autocomplete="off"></label>
+        <label>Масштаб параметров<select id="rate-scale"><option value="1e-4">× 10⁻⁴ ч⁻¹</option><option value="1e-6">× 10⁻⁶ ч⁻¹</option><option value="1">ч⁻¹ (без множителя)</option></select></label>
+      </div>
+      <div class="section-top"><h2>Элементы</h2><button class="text-button" id="import-csv" type="button">Импорт CSV</button></div>
+      <div class="table-wrap"><table class="element-table"><thead><tr><th class="id-col">ID</th><th>Название</th><th class="rate-col">Параметр ω <span id="rate-unit">× 10⁻⁴ ч⁻¹</span></th><th class="mass-col">Масса, кг</th><th class="reserve-col">Резервов k</th><th class="max-col reserve-only" hidden>Макс. k</th><th class="allow-col reserve-only" hidden>Разрешён</th><th class="remove-col"><span class="sr-only">Удалить</span></th></tr></thead><tbody id="element-rows"></tbody></table></div>
+      <button class="text-button add-button" id="add-element" type="button">+ Добавить элемент</button>
+      <p class="field-note">Один ID — один физический элемент. k = 1 означает две одинаковые параллельные копии.</p>
+      <div class="reserve-only target-settings settings-grid" hidden><label>Требуемая вероятность Pзад<input id="target" inputmode="decimal" value="0,999" autocomplete="off"></label><label>Максимальная масса, кг <span class="optional">необязательно</span><input id="max-mass" inputmode="decimal" placeholder="Без ограничения" autocomplete="off"></label></div>
+      <details class="advanced"><summary>Формулы и ограничения</summary><div class="advanced-content"><p class="field-note analysis-only">Задание 1: qᵢ ≈ ωᵢτ. Вероятность условия И/ИЛИ вычисляется по состояниям независимых физических элементов. Повтор одного ID учитывается как тот же элемент. Масса считается по таблице один раз.</p><p class="field-note reserve-only" hidden>Задание 2: P ≈ 1 − Σ(ωᵢτ)^(kᵢ+1). Масса: M = Σmᵢ(kᵢ+1).</p><p class="field-note reserve-only" hidden>Последовательная система с поэлементным резервированием. При k = 0: P ≈ 1 − τΣωᵢ. Число элементов и их параметры задаёте вы.</p><label class="reserve-only" hidden>Лимит точного поиска<select id="search-limit"><option value="5000">5 000 структур</option><option value="15000" selected>15 000 структур</option><option value="50000">50 000 структур</option></select></label><p class="field-note">Независимые невосстанавливаемые элементы. Нагруженные резервы идентичны основному элементу; переключение идеально.</p><p class="field-note reserve-only" hidden>Текущие k — нижние границы поиска. Максимальные k и разрешение задаются для каждого элемента. Дополнительный предел сервера: 5 секунд на поиск.</p></div></details>
+    </section>
+    <section id="panel-structure" data-panel="1" aria-label="Структура системы" hidden>
+      <div class="section-top"><div><h2>Условие работоспособности</h2><p class="muted analysis-only">И — работают все ветви; ИЛИ — достаточно одной.</p><p class="muted reserve-only" hidden>Задание 2: работают все элементы последовательной системы.</p></div><button class="text-button" id="toggle-editor" type="button">Ввести выражением</button></div>
+      <div id="builder"></div>
+      <div id="expression-editor" hidden><label>Выражение<textarea id="expression" rows="4" maxlength="2400" spellcheck="false" placeholder="A & B & C"></textarea></label><p class="field-note">И / AND / &amp; — работают все; ИЛИ / OR / | — достаточно одного. И имеет приоритет, скобки задают группировку. В задании 1 повтор ID означает общий физический элемент; отдельным элементам нужны разные ID. В задании 2 допустимо только И без повторов.</p><div id="element-tokens" class="tokens"></div></div>
+      <div class="expression-preview" aria-label="Выражение системы"><span class="eyebrow">Система работает, если</span><code id="expression-preview">—</code></div>
+      <p class="field-note analysis-only">Группы И/ИЛИ можно вкладывать. Повторный ID обозначает общий физический элемент в нескольких ветвях, его масса учитывается один раз.</p><p class="field-note reserve-only" hidden>В задании 2 используйте только группы И без повторов ID; одинаковые параллельные копии задаются количеством резервов k.</p>
+    </section>
+    <section id="panel-results" data-panel="2" aria-label="Результаты" hidden>
+      <div class="empty-state" id="empty-result"><h2>Результат появится после расчёта</h2><p class="muted">Заполните данные и задайте структуру системы.</p></div>
+      <div id="results" hidden>
+        <div class="section-top"><h2>Результат расчёта</h2><div class="export-actions" aria-label="Экспорт"><button id="export-pdf" type="button">PDF</button><button id="export-csv" type="button">CSV</button><button id="export-svg" type="button">SVG</button></div></div>
+        <div id="optimization-status" class="message" role="status" hidden></div>
+        <dl class="metrics"><div><dt>Вероятность P</dt><dd id="metric-p">—</dd><small id="metric-q"></small></div><div><dt>Масса системы</dt><dd id="metric-mass">—</dd><small id="metric-increase"></small></div><div class="reserve-only" hidden><dt>Требование</dt><dd id="metric-target">—</dd><small id="metric-before"></small></div></dl>
+        <h3>Диаграмма безотказной работы</h3><div id="diagram" class="diagram" aria-label="Диаграмма системы"></div>
+        <p class="field-note" id="diagram-note">A.1, A.2 — разные копии группы A. Повторные обозначения на схеме — те же физические элементы.</p>
+        <div class="table-wrap"><table class="result-table"><thead><tr><th>ID</th><th>Элемент</th><th>Резервов / копий</th><th>Масса группы, кг</th><th>Влияние на P</th></tr></thead><tbody id="result-rows"></tbody></table></div>
+        <p class="field-note">Влияние — прирост вероятности системы, если вся группа выбранного элемента станет безотказной.</p>
+        <details class="advanced"><summary>Формулы, допущения и замечания</summary><div class="advanced-content"><code id="result-expression"></code><p id="result-formula"></p><ul id="warnings"></ul></div></details>
+        <details class="advanced" id="trace-details" hidden><summary>Шаги резервирования</summary><div class="table-wrap"><table class="result-table"><thead><tr><th>Шаг</th><th>Добавлен резерв</th><th>P системы</th><th>Масса, кг</th></tr></thead><tbody id="trace-rows"></tbody></table></div><p class="field-note">Показан путь к найденной структуре; это не порядок проверки всех кандидатов.</p></details>
+      </div>
+    </section>
+    <footer class="workflow-footer"><button type="button" class="secondary" id="back" hidden>← Назад</button><span class="muted" id="step-caption">Введите собственные данные</span><button type="button" class="primary" id="next">К структуре →</button></footer>
+    <footer class="page-footer"><span>NADEG · Учебный расчёт</span><span>Данные сохраняются в этом браузере. Расчёт выполняется на сервере.</span></footer>
+  </main>
+  <input type="file" id="project-file" accept=".json,application/json" hidden>
+  <input type="file" id="csv-file" accept=".csv,text/csv" hidden>
+  <dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">Подтвердить действие</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="confirm" type="submit">Продолжить</button></div></form></dialog>
+</body>
+</html>

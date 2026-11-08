@@ -1,0 +1,6 @@
+# Opt-in only for Docker nested inside an LXC that cannot load docker-default.
+# The outer LXC AppArmor policy remains in force.
+services:
+  web:
+    security_opt:
+      - apparmor=unconfined
